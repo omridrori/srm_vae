@@ -1,0 +1,164 @@
+--- Running 5-Fold Cross-Validation ---
+Running Fold 1/5...
+Fold 1: Training on 4010 samples.
+      Epoch 50/1000, Total Loss: 91653.16
+      Epoch 100/1000, Total Loss: 87364.28
+      Epoch 150/1000, Total Loss: 85425.23
+      Epoch 200/1000, Total Loss: 84391.73
+      Epoch 250/1000, Total Loss: 82978.78
+      Epoch 300/1000, Total Loss: 81939.55
+      Epoch 350/1000, Total Loss: 81280.06
+      Epoch 400/1000, Total Loss: 80782.54
+      Epoch 450/1000, Total Loss: 80381.51
+      Epoch 500/1000, Total Loss: 79933.03
+      Epoch 550/1000, Total Loss: 79611.55
+      Epoch 600/1000, Total Loss: 79370.02
+      Epoch 650/1000, Total Loss: 79336.57
+      Epoch 700/1000, Total Loss: 79043.78
+      Epoch 750/1000, Total Loss: 79013.87
+      Epoch 800/1000, Total Loss: 78870.00
+      Epoch 850/1000, Total Loss: 78799.55
+      Epoch 900/1000, Total Loss: 78607.44
+      Epoch 950/1000, Total Loss: 78518.96
+      Epoch 1000/1000, Total Loss: 78446.18
+Latent mu mean: 5.0760376325342804e-05
+Latent mu std: 0.04932995140552521
+Running Fold 2/5...
+Fold 2: Training on 4010 samples.
+      Epoch 50/1000, Total Loss: 89361.52
+      Epoch 100/1000, Total Loss: 85810.53
+      Epoch 150/1000, Total Loss: 84601.88
+      Epoch 200/1000, Total Loss: 83421.32
+      Epoch 250/1000, Total Loss: 82536.16
+      Epoch 300/1000, Total Loss: 81570.50
+      Epoch 350/1000, Total Loss: 80885.27
+      Epoch 400/1000, Total Loss: 80198.36
+      Epoch 450/1000, Total Loss: 79724.52
+      Epoch 500/1000, Total Loss: 79488.65
+      Epoch 550/1000, Total Loss: 79172.23
+      Epoch 600/1000, Total Loss: 78874.84
+      Epoch 650/1000, Total Loss: 78730.60
+      Epoch 700/1000, Total Loss: 78663.03
+      Epoch 750/1000, Total Loss: 78500.65
+      Epoch 800/1000, Total Loss: 78303.50
+      Epoch 850/1000, Total Loss: 78197.19
+      Epoch 900/1000, Total Loss: 78159.41
+      Epoch 950/1000, Total Loss: 78152.58
+      Epoch 1000/1000, Total Loss: 78054.00
+Latent mu mean: -5.614341262116795e-06
+Latent mu std: 0.04776527360081673
+Running Fold 3/5...
+Fold 3: Training on 4010 samples.
+      Epoch 50/1000, Total Loss: 90601.55
+      Epoch 100/1000, Total Loss: 86335.45
+      Epoch 150/1000, Total Loss: 84528.23
+      Epoch 200/1000, Total Loss: 82956.96
+      Epoch 250/1000, Total Loss: 82047.30
+      Epoch 300/1000, Total Loss: 81196.11
+      Epoch 350/1000, Total Loss: 80561.88
+      Epoch 400/1000, Total Loss: 79945.02
+      Epoch 450/1000, Total Loss: 79707.77
+      Epoch 500/1000, Total Loss: 79433.28
+      Epoch 550/1000, Total Loss: 79315.62
+      Epoch 600/1000, Total Loss: 79241.42
+      Epoch 650/1000, Total Loss: 79173.62
+      Epoch 700/1000, Total Loss: 78999.75
+      Epoch 750/1000, Total Loss: 78749.31
+      Epoch 800/1000, Total Loss: 78648.95
+      Epoch 850/1000, Total Loss: 78465.53
+      Epoch 900/1000, Total Loss: 78427.50
+      Epoch 950/1000, Total Loss: 78118.87
+      Epoch 1000/1000, Total Loss: 78071.34
+Latent mu mean: 0.0002789654827211052
+Latent mu std: 0.04825052618980408
+Running Fold 4/5...
+Fold 4: Training on 4011 samples.
+      Epoch 50/1000, Total Loss: 91024.02
+      Epoch 100/1000, Total Loss: 86353.36
+      Epoch 150/1000, Total Loss: 84912.98
+      Epoch 200/1000, Total Loss: 83420.88
+      Epoch 250/1000, Total Loss: 82480.73
+      Epoch 300/1000, Total Loss: 81527.42
+      Epoch 350/1000, Total Loss: 80584.30
+      Epoch 400/1000, Total Loss: 79945.34
+      Epoch 450/1000, Total Loss: 79510.43
+      Epoch 500/1000, Total Loss: 79208.98
+      Epoch 550/1000, Total Loss: 79228.78
+      Epoch 600/1000, Total Loss: 78863.28
+      Epoch 650/1000, Total Loss: 78827.37
+      Epoch 700/1000, Total Loss: 78535.12
+      Epoch 750/1000, Total Loss: 78412.41
+      Epoch 800/1000, Total Loss: 78299.02
+      Epoch 850/1000, Total Loss: 78138.60
+      Epoch 900/1000, Total Loss: 78072.95
+      Epoch 950/1000, Total Loss: 77969.20
+      Epoch 1000/1000, Total Loss: 77918.60
+Latent mu mean: -0.0002160379954148084
+Latent mu std: 0.04906623810529709
+Running Fold 5/5...
+Fold 5: Training on 4011 samples.
+      Epoch 50/1000, Total Loss: 92259.74
+      Epoch 100/1000, Total Loss: 87368.94
+      Epoch 150/1000, Total Loss: 85472.83
+      Epoch 200/1000, Total Loss: 84130.66
+      Epoch 250/1000, Total Loss: 82690.50
+      Epoch 300/1000, Total Loss: 81529.16
+      Epoch 350/1000, Total Loss: 81017.48
+      Epoch 400/1000, Total Loss: 80672.38
+      Epoch 450/1000, Total Loss: 80420.27
+      Epoch 500/1000, Total Loss: 80003.47
+      Epoch 550/1000, Total Loss: 79722.23
+      Epoch 600/1000, Total Loss: 79362.81
+      Epoch 650/1000, Total Loss: 79295.32
+      Epoch 700/1000, Total Loss: 79115.90
+      Epoch 750/1000, Total Loss: 78835.84
+      Epoch 800/1000, Total Loss: 78604.88
+      Epoch 850/1000, Total Loss: 78605.51
+      Epoch 900/1000, Total Loss: 78582.91
+      Epoch 950/1000, Total Loss: 78566.15
+      Epoch 1000/1000, Total Loss: 78366.59
+Latent mu mean: -8.768789848545566e-05
+Latent mu std: 0.05012441426515579
+
+Analysis finished in 112.35 seconds.
+
+--- Results for Lag: 0 ms ---
+
+1. VAE Shared Latent Space Encoding:
+   Mean Correlation (r) = 0.2123 (+/- 0.0108)
+
+2. VAE Denoising vs. Original Data Encoding:
+   Subject 1:
+     - Original Corr (r) : 0.3164
+     - Denoised Corr (r) : 0.2895
+     - Improvement       : -8.50%
+   Subject 2:
+     - Original Corr (r) : 0.2198
+     - Denoised Corr (r) : 0.2262
+     - Improvement       : 2.93%
+   Subject 3:
+     - Original Corr (r) : 0.2161
+     - Denoised Corr (r) : 0.1597
+     - Improvement       : -26.11%
+   Subject 4:
+     - Original Corr (r) : 0.1952
+     - Denoised Corr (r) : 0.1600
+     - Improvement       : -18.03%
+   Subject 5:
+     - Original Corr (r) : 0.2337
+     - Denoised Corr (r) : 0.2563
+     - Improvement       : 9.69%
+   Subject 6:
+     - Original Corr (r) : 0.3172
+     - Denoised Corr (r) : 0.3193
+     - Improvement       : 0.68%
+   Subject 7:
+     - Original Corr (r) : 0.2278
+     - Denoised Corr (r) : 0.1614
+     - Improvement       : -29.17%
+   Subject 8:
+     - Original Corr (r) : 0.2229
+     - Denoised Corr (r) : 0.1630
+     - Improvement       : -26.85%
+
+--- Script Finished ---

@@ -1,0 +1,386 @@
+--- Running a SINGLE Train/Test split (no CV) ---
+Running Fold 1/1...
+Fold 1: Training on 4511 samples.
+      Epoch 50/1000, Total Loss: 69554.52
+      Epoch 100/1000, Total Loss: 65858.44
+      Epoch 150/1000, Total Loss: 63972.66
+      Epoch 200/1000, Total Loss: 62379.57
+      Epoch 250/1000, Total Loss: 60965.16
+      Epoch 300/1000, Total Loss: 59824.46
+      Epoch 350/1000, Total Loss: 58926.64
+      Epoch 400/1000, Total Loss: 58094.57
+      Epoch 450/1000, Total Loss: 57444.84
+      Epoch 500/1000, Total Loss: 56900.48
+      Epoch 550/1000, Total Loss: 56389.87
+      Epoch 600/1000, Total Loss: 56022.92
+      Epoch 650/1000, Total Loss: 55589.07
+      Epoch 700/1000, Total Loss: 55197.98
+      Epoch 750/1000, Total Loss: 54815.05
+      Epoch 800/1000, Total Loss: 54721.42
+      Epoch 850/1000, Total Loss: 54397.47
+      Epoch 900/1000, Total Loss: 54058.62
+      Epoch 950/1000, Total Loss: 53742.26
+      Epoch 1000/1000, Total Loss: 53709.31
+
+--- DEBUG: MODEL OUTPUTS ---
+1. Avg Recon Error (all subjects): 0.4516
+  2. Subject 1 Latent mu -> Mean: -0.0023, Std: 0.7344
+  3. Subject 1 Latent log_var -> Mean: -7.0948, Std: 0.8485
+  2. Subject 2 Latent mu -> Mean: -0.0044, Std: 0.7216
+  3. Subject 2 Latent log_var -> Mean: -8.4881, Std: 0.9206
+  2. Subject 3 Latent mu -> Mean: 0.0031, Std: 0.7471
+  3. Subject 3 Latent log_var -> Mean: -7.3878, Std: 0.8600
+  2. Subject 4 Latent mu -> Mean: -0.0016, Std: 0.7839
+  3. Subject 4 Latent log_var -> Mean: -6.3664, Std: 1.1640
+  2. Subject 5 Latent mu -> Mean: 0.0033, Std: 0.7787
+  3. Subject 5 Latent log_var -> Mean: -8.1432, Std: 1.1847
+  2. Subject 6 Latent mu -> Mean: 0.0043, Std: 0.8568
+  3. Subject 6 Latent log_var -> Mean: -6.2673, Std: 1.3746
+  2. Subject 7 Latent mu -> Mean: 0.0034, Std: 0.7611
+  3. Subject 7 Latent log_var -> Mean: -7.3232, Std: 1.1368
+  2. Subject 8 Latent mu -> Mean: 0.0023, Std: 0.8089
+  3. Subject 8 Latent log_var -> Mean: -7.7457, Std: 1.4101
+4. Overall z stats -> Mean: 0.0012, Std: 0.7762
+5. Sample train mu (Subj 1, Word 1): [ 0.74719584 -0.55979496]
+6. Sample test mu (Subj 1, Word 1): [-0.49788678 -1.3631827 ]
+7. Norm of original sample Y (Subj 1, Word 1): 2.9554
+8. Norm of reconstructed sample Y (Subj 1, Word 1): 2.4354
+9. Overall shared_latent_train stats -> Mean: 0.0010, Std: 0.2653
+10. Overall shared_latent_test stats -> Mean: -0.0107, Std: 0.2439
+----------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 2])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 0.9969
+14. Weights stats -> Mean: -0.0069, Std: 0.0989
+15. Predictions stats -> Mean: -0.0007, Std: 0.0817
+16. Target Y_test stats -> Mean: -0.0107, Std: 0.2439
+17. Residuals stats -> Mean: -0.0101, Std: 0.2420
+18. Correlations per latent dim: [0.19905451 0.1781572 ]
+19. Skewness of Predictions: 0.1622
+20. Skewness of Target Y_test: -0.0413
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 15])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 10.1474
+14. Weights stats -> Mean: -0.0084, Std: 0.3670
+15. Predictions stats -> Mean: 0.0066, Std: 0.3263
+16. Target Y_test stats -> Mean: -0.0081, Std: 0.7214
+17. Residuals stats -> Mean: -0.0147, Std: 0.7106
+18. Correlations per latent dim: [0.18902849 0.19456926 0.28297755 0.289841   0.2590174  0.22805166
+ 0.22880611 0.27406812 0.27539706 0.07099842 0.20495825 0.30551353
+ 0.15363152 0.38409057 0.38180074]
+19. Skewness of Predictions: 0.2892
+20. Skewness of Target Y_test: 1.0776
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 15])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 10.1474
+14. Weights stats -> Mean: -0.0084, Std: 0.3670
+15. Predictions stats -> Mean: 0.0066, Std: 0.3263
+16. Target Y_test stats -> Mean: 0.0165, Std: 1.0093
+17. Residuals stats -> Mean: 0.0099, Std: 0.9639
+18. Correlations per latent dim: [0.1752105  0.26893064 0.31350434 0.3388781  0.19248103 0.23507221
+ 0.4040739  0.26335195 0.37075374 0.09112229 0.23214963 0.35228708
+ 0.22169165 0.4382439  0.38272092]
+19. Skewness of Predictions: 0.2892
+20. Skewness of Target Y_test: 0.5215
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 43])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 12.0192
+14. Weights stats -> Mean: 0.0096, Std: 0.2565
+15. Predictions stats -> Mean: -0.0043, Std: 0.2637
+16. Target Y_test stats -> Mean: -0.0295, Std: 0.6064
+17. Residuals stats -> Mean: -0.0252, Std: 0.6195
+18. Correlations per latent dim: [ 0.23425932  0.04985291  0.13560796  0.03791452  0.07996528  0.27103436
+  0.28853917  0.09705792  0.12169061  0.12647359  0.12998313  0.13252045
+  0.02190555  0.07302366  0.24996218  0.3579772   0.2965524   0.14420484
+  0.06275351  0.13538297  0.17049977  0.3398956   0.22573045  0.33335018
+  0.04563938  0.00053487  0.11219502  0.02095526  0.11905236  0.17854415
+  0.22610345  0.12293977  0.05268078  0.04496967  0.2002694   0.0519844
+  0.11625936  0.05922097  0.06428716  0.02279372 -0.01779995  0.14535402
+  0.09215117]
+19. Skewness of Predictions: -0.3501
+20. Skewness of Target Y_test: 0.0486
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 43])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 12.0192
+14. Weights stats -> Mean: 0.0096, Std: 0.2565
+15. Predictions stats -> Mean: -0.0043, Std: 0.2637
+16. Target Y_test stats -> Mean: -0.0106, Std: 1.0012
+17. Residuals stats -> Mean: -0.0063, Std: 0.9830
+18. Correlations per latent dim: [0.30613077 0.0672074  0.14202973 0.18153612 0.09079517 0.28180343
+ 0.22028448 0.2063138  0.23304278 0.06249221 0.20837331 0.1853311
+ 0.12027528 0.16673729 0.25227317 0.31352842 0.37723324 0.11874697
+ 0.12289608 0.19996504 0.25777218 0.38462475 0.24107453 0.32189363
+ 0.11713398 0.18179302 0.14700246 0.06930497 0.14224993 0.20326559
+ 0.27950263 0.09454276 0.15275754 0.27879995 0.2610976  0.09901244
+ 0.1427109  0.18601497 0.07886641 0.07905493 0.08338473 0.19242288
+ 0.2009045 ]
+19. Skewness of Predictions: -0.3501
+20. Skewness of Target Y_test: 0.1872
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 19])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 8.3747
+14. Weights stats -> Mean: 0.0062, Std: 0.2691
+15. Predictions stats -> Mean: -0.0141, Std: 0.2704
+16. Target Y_test stats -> Mean: -0.0268, Std: 0.7601
+17. Residuals stats -> Mean: -0.0127, Std: 0.7518
+18. Correlations per latent dim: [0.09019157 0.19855143 0.19109875 0.2078717  0.10936418 0.18979451
+ 0.11338066 0.08750082 0.18751831 0.26587236 0.15208681 0.22419366
+ 0.31585947 0.27279422 0.32972983 0.38859802 0.31214055 0.07173241
+ 0.10864777]
+19. Skewness of Predictions: -0.1817
+20. Skewness of Target Y_test: 2.4876
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 19])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 8.3747
+14. Weights stats -> Mean: 0.0062, Std: 0.2691
+15. Predictions stats -> Mean: -0.0141, Std: 0.2704
+16. Target Y_test stats -> Mean: -0.0093, Std: 1.0453
+17. Residuals stats -> Mean: 0.0048, Std: 1.0178
+18. Correlations per latent dim: [0.15871803 0.29018608 0.17177534 0.15974373 0.14229599 0.12418856
+ 0.16160473 0.18477736 0.27991238 0.17469579 0.18328093 0.19986752
+ 0.3228722  0.28298706 0.32766834 0.3744474  0.35843417 0.17685975
+ 0.22010764]
+19. Skewness of Predictions: -0.1817
+20. Skewness of Target Y_test: 1.0544
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 8])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 4.9707
+14. Weights stats -> Mean: 0.0006, Std: 0.2464
+15. Predictions stats -> Mean: 0.0013, Std: 0.2348
+16. Target Y_test stats -> Mean: -0.0293, Std: 0.7453
+17. Residuals stats -> Mean: -0.0306, Std: 0.7465
+18. Correlations per latent dim: [0.02405472 0.02563376 0.25404802 0.207771   0.12063552 0.1068046
+ 0.19937284 0.15707165]
+19. Skewness of Predictions: 0.2377
+20. Skewness of Target Y_test: 2.1551
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 8])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 4.9707
+14. Weights stats -> Mean: 0.0006, Std: 0.2464
+15. Predictions stats -> Mean: 0.0013, Std: 0.2348
+16. Target Y_test stats -> Mean: -0.0298, Std: 0.9717
+17. Residuals stats -> Mean: -0.0311, Std: 0.9537
+18. Correlations per latent dim: [0.06957811 0.01394995 0.35294354 0.28216976 0.09790883 0.14233577
+ 0.24113317 0.20421326]
+19. Skewness of Predictions: 0.2377
+20. Skewness of Target Y_test: 1.0530
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 40])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 11.9659
+14. Weights stats -> Mean: 0.0275, Std: 0.2636
+15. Predictions stats -> Mean: -0.0023, Std: 0.2733
+16. Target Y_test stats -> Mean: -0.0625, Std: 0.6794
+17. Residuals stats -> Mean: -0.0602, Std: 0.6658
+18. Correlations per latent dim: [ 0.17417707  0.29404563  0.31594458  0.3422022   0.4291005   0.39816457
+  0.0830231   0.39760444  0.3622957   0.3506986   0.1357424   0.19260937
+  0.28927475  0.36604264  0.09820852  0.09481491  0.30970657  0.10228458
+  0.12026662  0.38851732  0.39623874  0.07430698  0.38967407  0.15278001
+  0.17843147  0.22442083  0.25683367  0.05115173 -0.01340974  0.09300391
+  0.22443461  0.13917422  0.23516087  0.13763016  0.10241339  0.19196698
+  0.15931529  0.10305414  0.31238714  0.40416035]
+19. Skewness of Predictions: -0.1912
+20. Skewness of Target Y_test: 2.4782
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 40])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 11.9659
+14. Weights stats -> Mean: 0.0275, Std: 0.2636
+15. Predictions stats -> Mean: -0.0023, Std: 0.2733
+16. Target Y_test stats -> Mean: -0.0357, Std: 0.9721
+17. Residuals stats -> Mean: -0.0335, Std: 0.9450
+18. Correlations per latent dim: [0.10372008 0.32547385 0.24576059 0.22407171 0.38590384 0.38615885
+ 0.11092877 0.37462038 0.38985625 0.2243015  0.13391823 0.1514354
+ 0.29118052 0.3129518  0.29870012 0.09527716 0.25093788 0.19734019
+ 0.12424543 0.25576884 0.37905803 0.077962   0.3805621  0.15939121
+ 0.1762304  0.26269034 0.15775073 0.05524756 0.04739819 0.12657644
+ 0.18671979 0.17331633 0.1705238  0.14803942 0.1789658  0.24900724
+ 0.21525662 0.15872669 0.24077009 0.39927506]
+19. Skewness of Predictions: -0.1912
+20. Skewness of Target Y_test: 2.5029
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 12])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 8.1874
+14. Weights stats -> Mean: 0.0486, Std: 0.3276
+15. Predictions stats -> Mean: -0.0069, Std: 0.3385
+16. Target Y_test stats -> Mean: -0.0441, Std: 0.7798
+17. Residuals stats -> Mean: -0.0373, Std: 0.7549
+18. Correlations per latent dim: [0.26681036 0.16312276 0.25695404 0.24280234 0.35359478 0.26906732
+ 0.30333552 0.35900632 0.3116049  0.3019071  0.296568   0.31071836]
+19. Skewness of Predictions: -0.0434
+20. Skewness of Target Y_test: 1.7311
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 12])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 8.1874
+14. Weights stats -> Mean: 0.0486, Std: 0.3276
+15. Predictions stats -> Mean: -0.0069, Std: 0.3385
+16. Target Y_test stats -> Mean: -0.0183, Std: 0.9910
+17. Residuals stats -> Mean: -0.0115, Std: 0.9513
+18. Correlations per latent dim: [0.2778391  0.15033634 0.21443135 0.2434144  0.36881736 0.2907068
+ 0.3298797  0.32425466 0.33815736 0.30114684 0.3032697  0.24586992]
+19. Skewness of Predictions: -0.0434
+20. Skewness of Target Y_test: 1.3634
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 16])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 7.8469
+14. Weights stats -> Mean: 0.0062, Std: 0.2748
+15. Predictions stats -> Mean: -0.0067, Std: 0.2711
+16. Target Y_test stats -> Mean: -0.0078, Std: 0.8212
+17. Residuals stats -> Mean: -0.0011, Std: 0.8208
+18. Correlations per latent dim: [0.16404781 0.13052186 0.06021315 0.14294367 0.2527073  0.31090602
+ 0.14576834 0.15738659 0.08503709 0.269097   0.19805051 0.13973628
+ 0.15141198 0.19603933 0.14585824 0.16677867]
+19. Skewness of Predictions: -0.2528
+20. Skewness of Target Y_test: 4.3500
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 16])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 7.8469
+14. Weights stats -> Mean: 0.0062, Std: 0.2748
+15. Predictions stats -> Mean: -0.0067, Std: 0.2711
+16. Target Y_test stats -> Mean: -0.0134, Std: 1.0076
+17. Residuals stats -> Mean: -0.0067, Std: 0.9843
+18. Correlations per latent dim: [0.13079299 0.09246288 0.15087578 0.24976256 0.17833227 0.23169416
+ 0.13244747 0.29008216 0.14778435 0.34180796 0.21969448 0.3119034
+ 0.19669533 0.18885538 0.21711005 0.32648858]
+19. Skewness of Predictions: -0.2528
+20. Skewness of Target Y_test: 2.4224
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 31])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 10.4577
+14. Weights stats -> Mean: 0.0063, Std: 0.2630
+15. Predictions stats -> Mean: -0.0074, Std: 0.2461
+16. Target Y_test stats -> Mean: -0.0309, Std: 0.6416
+17. Residuals stats -> Mean: -0.0235, Std: 0.6457
+18. Correlations per latent dim: [0.14478469 0.09157711 0.2956749  0.27712232 0.05243442 0.21153682
+ 0.12686494 0.09623685 0.20515028 0.16561162 0.18834516 0.06280546
+ 0.27117085 0.21713747 0.10770299 0.20053825 0.13113177 0.17479625
+ 0.0708712  0.16366087 0.17005047 0.23289752 0.1949687  0.16081405
+ 0.18331166 0.20555827 0.17560439 0.1724274  0.12363554 0.22759773
+ 0.13311256]
+19. Skewness of Predictions: 0.3305
+20. Skewness of Target Y_test: 5.1621
+--------------------------------
+
+
+--- DEBUG: INSIDE REGRESSION ---
+11. Input Matrix Shapes -> X_train_b: torch.Size([4511, 51]), Y_train: torch.Size([4511, 31])
+12. Condition Number of X_train_b: 12.42
+13. Regression weights norm: 10.4577
+14. Weights stats -> Mean: 0.0063, Std: 0.2630
+15. Predictions stats -> Mean: -0.0074, Std: 0.2461
+16. Target Y_test stats -> Mean: -0.0218, Std: 0.9395
+17. Residuals stats -> Mean: -0.0144, Std: 0.9182
+18. Correlations per latent dim: [0.27291346 0.1819781  0.28558886 0.37015572 0.19901186 0.18524683
+ 0.14364703 0.19957468 0.24999462 0.19390477 0.23610842 0.06597473
+ 0.17489947 0.24074914 0.13853689 0.28107184 0.20408191 0.2056443
+ 0.18612386 0.2362943  0.18063259 0.24466649 0.21340021 0.2456547
+ 0.23725909 0.14665672 0.25523496 0.15141574 0.23734112 0.32340983
+ 0.19714668]
+19. Skewness of Predictions: 0.3305
+20. Skewness of Target Y_test: 3.5033
+--------------------------------
+
+
+Analysis finished in 21.26 seconds.
+
+--- Results for Lag: -150 ms ---
+
+1. VAE Shared Latent Space Encoding:
+   Mean Correlation (r) = 0.1886 (+/- 0.0000)
+
+2. VAE Denoising vs. Original Data Encoding:
+   Subject 1:
+     - Original Corr (r) : 0.2854
+     - Denoised Corr (r) : 0.2482
+     - Improvement       : -13.03%
+   Subject 2:
+     - Original Corr (r) : 0.1873
+     - Denoised Corr (r) : 0.1343
+     - Improvement       : -28.29%
+   Subject 3:
+     - Original Corr (r) : 0.2260
+     - Denoised Corr (r) : 0.2009
+     - Improvement       : -11.12%
+   Subject 4:
+     - Original Corr (r) : 0.1755
+     - Denoised Corr (r) : 0.1369
+     - Improvement       : -21.99%
+   Subject 5:
+     - Original Corr (r) : 0.2207
+     - Denoised Corr (r) : 0.2264
+     - Improvement       : 2.63%
+   Subject 6:
+     - Original Corr (r) : 0.2823
+     - Denoised Corr (r) : 0.2863
+     - Improvement       : 1.40%
+   Subject 7:
+     - Original Corr (r) : 0.2129
+     - Denoised Corr (r) : 0.1698
+     - Improvement       : -20.26%
+   Subject 8:
+     - Original Corr (r) : 0.2156
+     - Denoised Corr (r) : 0.1689
+     - Improvement       : -21.68%
+
+--- Script Finished ---

@@ -1,0 +1,71 @@
+_wandb:
+    value:
+        cli_version: 0.21.0
+        e:
+            c8xqcjicfnltvbrmpwuq1r64tydtcix5:
+                codePath: debug_vae.py
+                codePathLocal: debug_vae.py
+                cpu_count: 24
+                cpu_count_logical: 32
+                cudaVersion: "12.7"
+                disk:
+                    /:
+                        total: "988309090304"
+                        used: "637175042048"
+                email: omridrori1998@gmail.com
+                executable: C:\Users\omrid\miniconda3\envs\thesis\python.exe
+                gpu: NVIDIA RTX 4000 Ada Generation Laptop GPU
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 7424
+                      memoryTotal: "12878610432"
+                      name: NVIDIA RTX 4000 Ada Generation Laptop GPU
+                      uuid: GPU-707134a2-fc0b-42b1-b549-ed910b58b192
+                host: OmriDrori
+                memory:
+                    total: "68250017792"
+                os: Windows-10-10.0.22631-SP0
+                program: c:\Users\omrid\Desktop\university\machine_learning_project\debug_vae.py
+                python: CPython 3.11.13
+                root: C:\Users\omrid\Desktop\university\machine_learning_project
+                startedAt: "2025-08-02T15:51:52.058099Z"
+                writerId: c8xqcjicfnltvbrmpwuq1r64tydtcix5
+        m: []
+        python_version: 3.11.13
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.11.13
+            "5": 0.21.0
+            "8":
+                - 3
+            "12": 0.21.0
+            "13": windows-amd64
+beta:
+    value: 0.1
+cv_folds:
+    value: 1
+epochs:
+    value: 1000
+hidden_dim_1:
+    value: 128
+hidden_dim_2:
+    value: 128
+latent_dim:
+    value: 2
+learning_rate:
+    value: 0.001
+target_lag:
+    value: 130

@@ -1,0 +1,79 @@
+--- Running a SINGLE Train/Test split (no CV) ---
+Running Fold 1/1...
+Fold 1: Training on 4511 samples.
+      Epoch 50/1000, Total Loss: 94040.36
+      Epoch 100/1000, Total Loss: 92358.23
+      Epoch 150/1000, Total Loss: 91635.27
+      Epoch 200/1000, Total Loss: 91177.33
+      Epoch 250/1000, Total Loss: 90702.09
+      Epoch 300/1000, Total Loss: 90454.44
+      Epoch 350/1000, Total Loss: 90286.81
+      Epoch 400/1000, Total Loss: 90187.75
+      Epoch 450/1000, Total Loss: 90014.79
+      Epoch 500/1000, Total Loss: 89891.71
+      Epoch 550/1000, Total Loss: 89815.26
+      Epoch 600/1000, Total Loss: 89802.61
+      Epoch 650/1000, Total Loss: 89638.57
+      Epoch 700/1000, Total Loss: 89734.48
+      Epoch 750/1000, Total Loss: 89572.61
+      Epoch 800/1000, Total Loss: 89486.04
+      Epoch 850/1000, Total Loss: 89285.00
+      Epoch 900/1000, Total Loss: 89265.23
+      Epoch 950/1000, Total Loss: 89229.82
+      Epoch 1000/1000, Total Loss: 89199.39
+
+--- DEBUG INFO ---
+Std of Shared Latent Space: 0.2283
+  Subject 1 Latent mu -> Mean: -0.0004, Std: 0.7133
+  Subject 2 Latent mu -> Mean: 0.0004, Std: 0.8475
+  Subject 3 Latent mu -> Mean: -0.0003, Std: 0.6332
+  Subject 4 Latent mu -> Mean: 0.0144, Std: 0.2729
+  Subject 5 Latent mu -> Mean: 0.0031, Std: 0.8399
+  Subject 6 Latent mu -> Mean: 0.0050, Std: 0.6341
+  Subject 7 Latent mu -> Mean: 0.0061, Std: 0.5997
+  Subject 8 Latent mu -> Mean: 0.0036, Std: 0.7548
+------------------
+
+
+Analysis finished in 21.07 seconds.
+
+--- Results for Lag: 150 ms ---
+
+1. VAE Shared Latent Space Encoding:
+   Mean Correlation (r) = 0.2546 (+/- 0.0000)
+
+2. VAE Denoising vs. Original Data Encoding:
+   Subject 1:
+     - Original Corr (r) : 0.3237
+     - Denoised Corr (r) : 0.3206
+     - Improvement       : -0.97%
+   Subject 2:
+     - Original Corr (r) : 0.2040
+     - Denoised Corr (r) : 0.1695
+     - Improvement       : -16.90%
+   Subject 3:
+     - Original Corr (r) : 0.1778
+     - Denoised Corr (r) : 0.1060
+     - Improvement       : -40.35%
+   Subject 4:
+     - Original Corr (r) : 0.2244
+     - Denoised Corr (r) : 0.1643
+     - Improvement       : -26.75%
+   Subject 5:
+     - Original Corr (r) : 0.2439
+     - Denoised Corr (r) : 0.2146
+     - Improvement       : -11.99%
+   Subject 6:
+     - Original Corr (r) : 0.3228
+     - Denoised Corr (r) : 0.2937
+     - Improvement       : -9.01%
+   Subject 7:
+     - Original Corr (r) : 0.1756
+     - Denoised Corr (r) : 0.0832
+     - Improvement       : -52.63%
+   Subject 8:
+     - Original Corr (r) : 0.2397
+     - Denoised Corr (r) : 0.1730
+     - Improvement       : -27.83%
+
+--- Script Finished ---

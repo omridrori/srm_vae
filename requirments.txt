@@ -1,0 +1,11 @@
+torch>=2.2
+numpy
+scipy
+pandas
+scikit-learn
+statsmodels
+matplotlib
+seaborn
+dataclasses-json
+tqdm
+typing_extensions

@@ -1,0 +1,35 @@
+@'
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.venv/
+.env
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Data/artifacts
+*.pkl
+*.npz
+*.npy
+*.mat
+runs/
+checkpoints/
+outputs/
+'@ | Out-File -Encoding utf8 .gitignore
+
+@'
+* text=auto eol=lf
+'@ | Out-File -Encoding utf8 .gitattributes
+*.json
+*.wandb

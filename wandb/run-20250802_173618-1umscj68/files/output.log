@@ -1,0 +1,44 @@
+Running Fold 3/5...
+Fold 3: Training on 4010 samples.
+  Recon Loss: 88517.02, KLD Loss: 2612.98
+      Epoch 50/1000, Total Loss: 92436.50
+  Recon Loss: 77082.87, KLD Loss: 4251.08
+      Epoch 100/1000, Total Loss: 83459.50
+  Recon Loss: 71098.02, KLD Loss: 5400.33
+      Epoch 150/1000, Total Loss: 79198.51
+  Recon Loss: 67279.45, KLD Loss: 6345.10
+      Epoch 200/1000, Total Loss: 76797.09
+  Recon Loss: 64318.82, KLD Loss: 7125.08
+      Epoch 250/1000, Total Loss: 75006.44
+  Recon Loss: 62202.80, KLD Loss: 7702.68
+      Epoch 300/1000, Total Loss: 73756.82
+  Recon Loss: 60720.97, KLD Loss: 8112.60
+      Epoch 350/1000, Total Loss: 72889.88
+  Recon Loss: 59750.62, KLD Loss: 8423.36
+      Epoch 400/1000, Total Loss: 72385.66
+  Recon Loss: 58829.79, KLD Loss: 8663.16
+      Epoch 450/1000, Total Loss: 71824.52
+  Recon Loss: 58091.14, KLD Loss: 8872.14
+      Epoch 500/1000, Total Loss: 71399.35
+  Recon Loss: 57508.88, KLD Loss: 9065.52
+      Epoch 550/1000, Total Loss: 71107.16
+  Recon Loss: 56891.66, KLD Loss: 9218.55
+      Epoch 600/1000, Total Loss: 70719.48
+  Recon Loss: 56388.73, KLD Loss: 9352.92
+      Epoch 650/1000, Total Loss: 70418.12
+  Recon Loss: 55889.40, KLD Loss: 9487.20
+      Epoch 700/1000, Total Loss: 70120.20
+  Recon Loss: 55641.72, KLD Loss: 9556.67
+      Epoch 750/1000, Total Loss: 69976.72
+  Recon Loss: 55432.03, KLD Loss: 9641.55
+      Epoch 800/1000, Total Loss: 69894.36
+  Recon Loss: 55210.38, KLD Loss: 9713.12
+      Epoch 850/1000, Total Loss: 69780.05
+  Recon Loss: 54859.75, KLD Loss: 9767.23
+      Epoch 900/1000, Total Loss: 69510.60
+  Recon Loss: 54735.19, KLD Loss: 9818.28
+      Epoch 950/1000, Total Loss: 69462.61
+  Recon Loss: 54464.53, KLD Loss: 9858.51
+      Epoch 1000/1000, Total Loss: 69252.30
+Latent mu mean: -0.00032467706478200853
+Latent mu std: 0.26088380813598633

@@ -38,3 +38,4 @@ outputs/
 /hyperparameter_optimization/wandb
 /wandb
 /wandb
+/.cursor

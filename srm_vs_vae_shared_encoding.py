@@ -9,20 +9,20 @@ SEED        = 1234               # random seed
 TRAIN_RATIO = 0.8                # first 80% train, last 20% test
 LAG_LIST    = [-2000, -1000, -500, 0, 100, 200, 300, 500, 1000, 1500, 1800]
 
-# Shared latent sizes (keep them the same for fairness)
-SRM_K       = 5                  # classic SRM shared dims
-VAE_K       = 5                  # VAE shared dims
+ 
+SRM_K       = 5               
+VAE_K       = 5                  
 
 # Training / eval hyperparams
-VAE_EPOCHS  = 10000
-VAE_LR      = 4e-4
-VAE_BETA    = 1.9
-PCA_DIM     = 50                 # reduce embeddings to 50D then L2 row-normalize
+VAE_EPOCHS  = 1000
+VAE_LR      = 1e-2
+VAE_BETA    = 2
+PCA_DIM     = 50                  
 
 # Plotting
 YLIM        = (0.0, 0.40)
 FIGSIZE     = (4.8, 3.5)
-SAVE_PNG    = None               # e.g., "shared_encoding_srm_vs_vae.png" or None
+SAVE_PNG    = None              
 # =====================================
 
 import os
@@ -308,8 +308,6 @@ def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
 
     best_loss = math.inf
     best_state = None
-    patience = 1000
-    no_imp = 0
 
     for ep in range(1, epochs + 1):
         model.train()
@@ -323,17 +321,9 @@ def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
         if curr < best_loss - 1e-5:
             best_loss = curr
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
-            no_imp = 0
-        else:
-            no_imp += 1
 
         if verbose and (ep % 25 == 0 or ep == 1):
-            print(f"[ep {ep:03d}] loss={curr:.5f}  rec={float(rec):.5f}  kl={float(kl):.5f}  no_imp={no_imp}")
-
-        if no_imp >= patience:
-            if verbose:
-                print(f"[early stop] best_loss={best_loss:.5f} at ep≈{ep-no_imp}")
-            break
+            print(f"[ep {ep:03d}] loss={curr:.5f}  rec={float(rec):.5f}  kl={float(kl):.5f}")
 
     if best_state is not None:
         model.load_state_dict(best_state)

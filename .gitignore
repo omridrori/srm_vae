@@ -33,3 +33,8 @@ outputs/
 '@ | Out-File -Encoding utf8 .gitattributes
 *.json
 *.wandb
+*.pt
+/wandb
+/hyperparameter_optimization/wandb
+/wandb
+/wandb

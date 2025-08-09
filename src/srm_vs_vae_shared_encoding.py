@@ -1,23 +1,28 @@
-# vae_single_lag.py
-# Train & evaluate the SRM-VAE on a SINGLE lag (default 20 ms).
-# - No CLI, no folds. Simple time split by TRAIN_RATIO.
-# - Prints reconstruction MSE per subject and shared-space encoding r.
+# srm_vs_vae_shared_encoding.py
+# Single-file comparison: classic SRM vs SRM-VAE
+# - No CLI, no folds. Train/test split by time.
+# - Evaluates a list of lags (ms) and plots shared-space encoding curves.
 
 # ========= CONFIG (edit here) =========
 DATA_PATH   = "./all_data.pkl"   # path to your all_data.pkl
 SEED        = 1234               # random seed
 TRAIN_RATIO = 0.8                # first 80% train, last 20% test
-LAG_MS      = 20                 # target lag (ms); uses closest available lag in the file
+LAG_LIST    = [-2000, -1000, -500, 0, 100, 200, 300, 500, 1000, 1500, 1800]
 
-LATENT_K    = 5                # VAE shared latent dims
-EPOCHS      = 400000
-LR          =5e-4
-BETA        = 2               # β-VAE weight
+# Shared latent sizes (keep them the same for fairness)
+SRM_K       = 5                  # classic SRM shared dims
+VAE_K       = 5                  # VAE shared dims
 
-# For shared-space encoding evaluation (X -> z)
+# Training / eval hyperparams
+VAE_EPOCHS  = 10000
+VAE_LR      = 4e-4
+VAE_BETA    = 1.9
 PCA_DIM     = 50                 # reduce embeddings to 50D then L2 row-normalize
-VERBOSE     = True
-SAVE_NPZ    = None               # e.g., "vae_single_lag_results.npz" or None
+
+# Plotting
+YLIM        = (0.0, 0.40)
+FIGSIZE     = (4.8, 3.5)
+SAVE_PNG    = None               # e.g., "shared_encoding_srm_vs_vae.png" or None
 # =====================================
 
 import os
@@ -29,8 +34,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+import matplotlib.pyplot as plt
 
-# Torch
+# --- Torch
 try:
     import torch
     import torch.nn as nn
@@ -39,10 +45,17 @@ except Exception:
     print("ERROR: PyTorch not found. Install with: pip install torch")
     raise
 
-# SciKit
+# --- SciKit
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize, StandardScaler
 from sklearn.linear_model import LinearRegression
+
+# --- BrainIAK SRM
+try:
+    from brainiak.funcalign import srm as brainiak_srm
+except Exception:
+    print("ERROR: BrainIAK not found. Install with: pip install brainiak")
+    raise
 
 
 # -----------------------------
@@ -90,13 +103,14 @@ class LagBatch:
 # -----------------------------
 # I/O and preprocessing
 # -----------------------------
+
 def load_all_data(pkl_path: str):
     """
-    Expected keys:
-      - 'electrode_data': [S, L, T, Emax]
-      - 'electrode_number': [S]
-      - 'word_embeddings': [T, D_emb]
-      - 'lags': [L] (ms)
+    Expected keys in the pkl:
+      - 'electrode_data': shape [S, L, T, Emax]
+      - 'electrode_number': length S
+      - 'word_embeddings': shape [T, D_emb]
+      - 'lags': length L (ms)
     """
     with open(pkl_path, "rb") as f:
         obj = pickle.load(f)
@@ -121,6 +135,10 @@ def time_split_indices(T: int, train_ratio: float) -> Tuple[np.ndarray, np.ndarr
     return np.arange(0, n_train, dtype=int), np.arange(n_train, T, dtype=int)
 
 
+# -----------------------------
+# Build a lag batch (from loaded arrays)
+# -----------------------------
+
 def build_lag_batch_from_loaded(
     Y_data: np.ndarray,
     elec_num: np.ndarray,
@@ -130,14 +148,13 @@ def build_lag_batch_from_loaded(
     latent_dim: int,
     train_ratio: float,
 ) -> LagBatch:
-    """Build a single-lag batch with z-scoring per subject and centered embeddings."""
     S, L, T, Emax = Y_data.shape
     lag_idx = choose_lag_index(lags, lag_ms)
     chosen_ms = int(lags[lag_idx])
 
     train_index, test_index = time_split_indices(T, train_ratio)
 
-    # Embeddings: center by train mean only
+    # Embeddings: PCA->L2 will be applied later, but we center here with train mean only.
     X_train = X[train_index, :]
     X_test  = X[test_index, :]
     X_train = X_train - X_train.mean(axis=0, keepdims=True)
@@ -230,7 +247,7 @@ class SRMVAE(nn.Module):
     def encode_group(self, subject_views: Dict[int, SubjectView], split: str):
         mu_list, logvar_list = [], []
         for sid, view in subject_views.items():
-            x = getattr(view, split)  # [T,E_i]
+            x = getattr(view, split)
             mu_i, logvar_i = self.encoders[str(sid)](x)
             mu_list.append(mu_i)
             logvar_list.append(logvar_i)
@@ -240,14 +257,22 @@ class SRMVAE(nn.Module):
         mu, logvar = self.encode_group(subject_views, split)
         z = mu + torch.exp(0.5 * logvar) * torch.randn_like(mu)
         zf = self.core(z)
-        # tensor (not python float) for stability
         recon_loss = torch.tensor(0.0, device=z.device)
         for sid, view in subject_views.items():
-            x = getattr(view, split)           # [T,E_i]
+            x = getattr(view, split)
             x_hat = self.decoders[str(sid)](zf)
             recon_loss = recon_loss + F.mse_loss(x_hat, x, reduction='mean')
         kl = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-        loss = recon_loss + beta * kl
+        
+        # SRM-like orthogonality on decoder weights
+        ortho_pen = torch.tensor(0.0, device=z.device)
+        for dec in self.decoders.values():
+            W = dec.lin.weight  # [E_i, k]
+            G = W.T @ W
+            I = torch.eye(G.shape[0], device=G.device)
+            ortho_pen = ortho_pen + torch.norm(G - I, p='fro')**2
+        
+        loss = recon_loss + beta * kl + 1e-6 * ortho_pen  # tune 1e-3
         return loss, recon_loss.detach(), kl.detach()
 
     @torch.no_grad()
@@ -266,8 +291,9 @@ class SRMVAE(nn.Module):
 
 
 # -----------------------------
-# Training
+# Training (VAE)
 # -----------------------------
+
 def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, verbose: bool = True) -> SRMVAE:
     dev = torch_device()
     for sid in batch.subjects:
@@ -282,12 +308,13 @@ def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
 
     best_loss = math.inf
     best_state = None
-    patience = math.inf
+    patience = 1000
     no_imp = 0
 
     for ep in range(1, epochs + 1):
         model.train()
-        loss, rec, kl = model(batch.subject_views, split="train", beta=beta)
+        beta_ep = beta * min(1.0, ep / 500)  # warm-up over ~50 epochs
+        loss, rec, kl = model(batch.subject_views, split="train", beta=beta_ep)
         opt.zero_grad(set_to_none=True)
         loss.backward()
         opt.step()
@@ -314,10 +341,11 @@ def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
 
 
 # -----------------------------
-# Evaluation helpers
+# Shared-space encoding metrics (both methods)
 # -----------------------------
+
 def _prep_embeddings(X_train: np.ndarray, X_test: np.ndarray, pca_dim: int, seed: int):
-    """PCA -> L2 normalize rows. Fit PCA on train only."""
+    """PCA->L2 normalize rows. Fit PCA on train only."""
     pca = PCA(n_components=pca_dim, svd_solver="auto", random_state=seed)
     X_train_p = pca.fit_transform(X_train)
     X_test_p  = pca.transform(X_test)
@@ -332,98 +360,192 @@ def _colwise_pearsonr(y_true: np.ndarray, y_pred: np.ndarray, eps: float = 1e-8)
     den = np.sqrt((yt**2).sum(axis=0) * (yp**2).sum(axis=0)) + eps
     return num / den
 
-def eval_encoding_PCA_Ridge(batch: LagBatch, vae: SRMVAE, pca_dim: int = 50, seed: int = SEED):
-    """Shared-space encoding: regress PCA+L2(X) -> standardized μ(z) on train; eval on test."""
+def shared_encoding_vae(batch: LagBatch, k: int, pca_dim: int, seed: int) -> Tuple[float, np.ndarray]:
+    """Return (mean r over dims, r per dim) for SRM-VAE at this lag."""
     dev = torch_device()
+    vae = train_srmvae_on_batch(batch, epochs=VAE_EPOCHS, lr=VAE_LR, beta=VAE_BETA, verbose=True)
     vae.eval()
-    with torch.no_grad():
-        z_tr, _, _ = vae.infer_z(batch.subject_views, split="train", use_mu=True)
-        z_te, _, _ = vae.infer_z(batch.subject_views, split="test",  use_mu=True)
+
+    # Infer shared z (μ)
+    z_tr, _, _ = vae.infer_z(batch.subject_views, split="train", use_mu=True)
+    z_te, _, _ = vae.infer_z(batch.subject_views, split="test",  use_mu=True)
     z_train = z_tr.cpu().numpy()  # [T_train, k]
     z_test  = z_te.cpu().numpy()  # [T_test,  k]
 
-    # Standardize z (train stats only)
+    # Standardize z per dim
     z_scaler = StandardScaler(with_mean=True, with_std=True)
     z_train_std = z_scaler.fit_transform(z_train)
     z_test_std  = z_scaler.transform(z_test)
 
-    # Embeddings: PCA(pca_dim) + L2 per row
+    # Embeddings -> PCA+L2
     X_train_raw = batch.X_train.cpu().numpy()
     X_test_raw  = batch.X_test.cpu().numpy()
-    X_train_p, X_test_p, pca_var = _prep_embeddings(X_train_raw, X_test_raw, pca_dim=pca_dim, seed=seed)
+    X_train_p, X_test_p, _ = _prep_embeddings(X_train_raw, X_test_raw, pca_dim=pca_dim, seed=seed)
 
-    # Linear regression X -> z
+    # Linear map X -> z (multi-output regression)
     reg = LinearRegression()
     reg.fit(X_train_p, z_train_std)
     z_hat_test_std = reg.predict(X_test_p)
 
     r_dims = _colwise_pearsonr(z_test_std, z_hat_test_std)
     r_mean = float(np.nanmean(r_dims))
+    return r_mean, r_dims
+
+
+def shared_encoding_srm(Y_data: np.ndarray, elec_num: np.ndarray, X: np.ndarray,
+                        lags: np.ndarray, lag_ms: int, train_ratio: float,
+                        k: int, pca_dim: int, seed: int) -> Tuple[int, float, np.ndarray]:
+    """
+    Classic SRM baseline (brainiak):
+    - Builds time-based train/test splits
+    - Fits SRM on train data per subject
+    - Averages shared time series across subjects
+    - Regresses embeddings → shared dims and returns correlation per dim.
+    Returns (chosen_lag_ms, mean r, r per dim)
+    """
+    S, L, T, Emax = Y_data.shape
+    lag_idx = choose_lag_index(lags, lag_ms)
+    chosen_ms = int(lags[lag_idx])
+
+    train_idx, test_idx = time_split_indices(T, train_ratio)
+
+    # Prepare per-subject matrices
+    train_data, test_data = [], []
+    for s in range(S):
+        e_i = int(elec_num[s])
+        mat = Y_data[s, lag_idx, :, :e_i]  # [T, E_i]
+        tr = mat[train_idx, :]
+        te = mat[test_idx, :]
+        tr_z, te_z = _zscore_train_apply(tr, te)
+        train_data.append(tr_z.T)  # [E_i, T_train]
+        test_data.append(te_z.T)   # [E_i, T_test]
+
+    # Fit SRM
+    srm = brainiak_srm.SRM(n_iter=100, features=k)
+    srm.fit(train_data)
+
+    shared_train_list = srm.transform(train_data)
+    shared_test_list  = srm.transform(test_data)
+
+    s_train = np.mean(np.stack(shared_train_list, axis=0), axis=0).T  # [T_train, k]
+    s_test  = np.mean(np.stack(shared_test_list,  axis=0), axis=0).T  # [T_test , k]
+
+    # Standardize dims
+    z_scaler = StandardScaler(with_mean=True, with_std=True)
+    s_train_std = z_scaler.fit_transform(s_train)
+    s_test_std  = z_scaler.transform(s_test)
+
+    # Embeddings -> PCA+L2
+    X_train = X[train_idx, :]
+    X_test  = X[test_idx, :]
+    X_train = X_train - X_train.mean(axis=0, keepdims=True)
+    X_test  = X_test  - X_train.mean(axis=0, keepdims=True)
+    X_train_p, X_test_p, _ = _prep_embeddings(X_train, X_test, pca_dim=pca_dim, seed=seed)
+
+    reg = LinearRegression()
+    reg.fit(X_train_p, s_train_std)
+    s_hat_test_std = reg.predict(X_test_p)
+
+    r_dims = _colwise_pearsonr(s_test_std, s_hat_test_std)
+    r_mean = float(np.nanmean(r_dims))
+    return chosen_ms, r_mean, r_dims
+
+
+# -----------------------------
+# Multi-lag sweep + plot
+# -----------------------------
+
+def sweep_and_plot(Y_data, elec_num, X, lags, lag_list, srm_k, vae_k,
+                   train_ratio, pca_dim, seed, ylim, figsize, save_png):
+    dev = torch_device()
+    print(f"[INFO] torch: {torch.__version__}, cuda: {torch.cuda.is_available()}, device: {dev}")
+    print(f"[DATA] Y={Y_data.shape}, X={X.shape}, lags_count={len(lags)}")
+    print(f"[CONF] TRAIN_RATIO={train_ratio}, SRM_K={srm_k}, VAE_K={vae_k}, PCA_DIM={pca_dim}")
+
+    srm_means, srm_sems, lag_actual_srm = [], [], []
+    vae_means, vae_sems, lag_actual_vae = [], [], []
+
+    for req in lag_list:
+        # SRM baseline
+        chosen_ms, srm_mean, srm_r_dims = shared_encoding_srm(
+            Y_data, elec_num, X, lags,
+            lag_ms=req, train_ratio=train_ratio,
+            k=srm_k, pca_dim=pca_dim, seed=seed
+        )
+        srm_means.append(srm_mean)
+        srm_sems.append(np.nanstd(srm_r_dims, ddof=1) / np.sqrt(len(srm_r_dims)))
+        lag_actual_srm.append(chosen_ms)
+        print(f"[SRM] lag req={req} -> chosen={chosen_ms} | r_mean={srm_mean:.3f}")
+
+        # VAE baseline
+        batch = build_lag_batch_from_loaded(
+            Y_data, elec_num, X, lags,
+            lag_ms=req, latent_dim=vae_k, train_ratio=train_ratio
+        )
+        vae_mean, vae_r_dims = shared_encoding_vae(batch, k=vae_k, pca_dim=pca_dim, seed=seed)
+        vae_means.append(vae_mean)
+        vae_sems.append(np.nanstd(vae_r_dims, ddof=1) / np.sqrt(len(vae_r_dims)))
+        lag_actual_vae.append(batch.lag_ms)
+        print(f"[VAE] lag req={req} -> chosen={batch.lag_ms} | r_mean={vae_mean:.3f}")
+
+    x = np.asarray(lag_list, dtype=int)
+    srm_means = np.asarray(srm_means)
+    srm_sems  = np.asarray(srm_sems)
+    vae_means = np.asarray(vae_means)
+    vae_sems  = np.asarray(vae_sems)
+
+    # Plot
+    plt.figure(figsize=figsize)
+    plt.fill_between(x, srm_means - srm_sems, srm_means + srm_sems, alpha=0.2, color='darkorange')
+    plt.plot(x, srm_means, linewidth=3.5, label='SRM', color='darkorange')
+
+    plt.fill_between(x, vae_means - vae_sems, vae_means + vae_sems, alpha=0.2, color='royalblue')
+    plt.plot(x, vae_means, linewidth=3.5, label='VAE', color='royalblue')
+
+    plt.axvline(0, ls='dashed', c='k', alpha=0.3)
+    plt.ylim(ylim)
+    plt.xlabel('lags (ms)')
+    plt.ylabel('Encoding Performance (r)')
+    plt.title('Shared Space Encoding')
+    plt.legend()
+    plt.tight_layout()
+
+    if save_png:
+        plt.savefig(save_png, dpi=150)
+        print(f"[PLOT] Saved to {save_png}")
+    plt.show()
+
     return {
-        "r_z_mean": r_mean,
-        "r_z_dims": r_dims,
-        "pca_explained": pca_var,
+        'x_requested': x,
+        'srm': {'means': srm_means, 'sems': srm_sems, 'chosen_lags': lag_actual_srm},
+        'vae': {'means': vae_means, 'sems': vae_sems, 'chosen_lags': lag_actual_vae},
     }
 
 
 # -----------------------------
 # Main
 # -----------------------------
-if __name__ == "__main__":
-    set_global_seed(SEED, deterministic=True)
-    dev = torch_device()
-    print(f"[INFO] torch: {torch.__version__}, cuda: {torch.cuda.is_available()}, device: {dev}")
-    print(f"[INFO] DATA_PATH={DATA_PATH} | LATENT_K={LATENT_K} | TRAIN_RATIO={TRAIN_RATIO} | LAG_MS(target)={LAG_MS}")
 
+if __name__ == '__main__':
+    set_global_seed(SEED, deterministic=True)
     try:
         Y_data, elec_num, X, lags = load_all_data(DATA_PATH)
     except Exception as e:
         print(f"[ERROR] Failed to load data: {e}")
         sys.exit(1)
 
-    # Build single-lag batch (closest to LAG_MS)
-    batch = build_lag_batch_from_loaded(
+    sweep_and_plot(
         Y_data=Y_data,
         elec_num=elec_num,
         X=X,
         lags=lags,
-        lag_ms=LAG_MS,
-        latent_dim=LATENT_K,
+        lag_list=LAG_LIST,
+        srm_k=SRM_K,
+        vae_k=VAE_K,
         train_ratio=TRAIN_RATIO,
+        pca_dim=PCA_DIM,
+        seed=SEED,
+        ylim=YLIM,
+        figsize=FIGSIZE,
+        save_png=SAVE_PNG,
     )
-    print(f"[OK] using lag_ms={batch.lag_ms} (closest to {LAG_MS})")
-    s1 = batch.subjects[0]
-    print(f"     S{s1} train shape: {tuple(batch.subject_views[s1].train.shape)}")
-    print(f"     X_train: {tuple(batch.X_train.shape)}  X_test: {tuple(batch.X_test.shape)}")
-
-    # Train VAE
-    print(f"[TRAIN] SRM-VAE on lag={batch.lag_ms} ms, k={batch.latent_dim}")
-    vae = train_srmvae_on_batch(batch, epochs=EPOCHS, lr=LR, beta=BETA, verbose=VERBOSE)
-
-    # Inference & quick reconstruction MSEs on test
-    vae.eval()
-    with torch.no_grad():
-        z_te, _, _ = vae.infer_z(batch.subject_views, split="test", use_mu=True)
-        recons_test = vae.reconstruct_subjects(z_te.to(dev))
-        for sid in batch.subjects:
-            x_true = batch.subject_views[sid].test.to(dev)
-            x_hat  = recons_test[sid]
-            mse = F.mse_loss(x_hat, x_true).item()
-            print(f"[TEST] Subject {sid}: recon MSE = {mse:.6f}")
-
-    # Shared-space encoding eval (X -> z)
-    print(f"[EVAL] PCA({PCA_DIM})+Linear encoding to z")
-    enc = eval_encoding_PCA_Ridge(batch, vae, pca_dim=PCA_DIM, seed=SEED)
-    print(f"[ENC] Shared-space r (mean over k={LATENT_K}): {enc['r_z_mean']:.4f}  | PCA var={enc['pca_explained']:.2f}")
-
-    if SAVE_NPZ:
-        np.savez(
-            SAVE_NPZ,
-            lag_ms=batch.lag_ms,
-            r_z_mean=enc["r_z_mean"],
-            r_z_dims=enc["r_z_dims"],
-            latent_k=LATENT_K,
-            train_ratio=TRAIN_RATIO,
-            pca_dim=PCA_DIM,
-        )
-        print(f"[SAVE] Wrote metrics to {SAVE_NPZ}")

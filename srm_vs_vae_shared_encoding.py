@@ -14,9 +14,9 @@ SRM_K       = 5
 VAE_K       = 5                  
 
 # Training / eval hyperparams
-VAE_EPOCHS  = 1000
-VAE_LR      = 1e-2
-VAE_BETA    = 2
+VAE_EPOCHS  = 500
+VAE_LR      = 5e-3
+VAE_BETA    = 0.5
 PCA_DIM     = 50                  
 
 # Plotting
@@ -229,19 +229,14 @@ class SRMVAE(nn.Module):
         for sid, e_i in elec_num.items():
             self.encoders[str(sid)] = PerSubjectEncoder(e_i, k)
             self.decoders[str(sid)] = PerSubjectDecoder(k, e_i)
-        self.core = nn.Sequential(nn.Linear(k, k), nn.ReLU(), nn.Linear(k, k))
-        for m in self.core:
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
+        self.core = nn.Identity()
 
     @staticmethod
     def _agg_posteriors(mu_list, logvar_list):
-        precisions = [torch.exp(-lv) for lv in logvar_list]
-        prec_sum = torch.stack(precisions, dim=0).sum(dim=0)
-        weighted_mu = torch.stack([m * p for m, p in zip(mu_list, precisions)], dim=0).sum(dim=0)
-        var = 1.0 / (prec_sum + 1e-8)
-        mu = var * weighted_mu
-        logvar = torch.log(var + 1e-8)
+        # Simple averaging of means (like SRM) instead of precision-weighted aggregation
+        mu = torch.stack(mu_list, dim=0).mean(dim=0)
+        # Average the logvars as well for consistency
+        logvar = torch.stack(logvar_list, dim=0).mean(dim=0)
         return mu, logvar
 
     def encode_group(self, subject_views: Dict[int, SubjectView], split: str):
@@ -253,7 +248,7 @@ class SRMVAE(nn.Module):
             logvar_list.append(logvar_i)
         return self._agg_posteriors(mu_list, logvar_list)
 
-    def forward(self, subject_views: Dict[int, SubjectView], split: str, beta: float = 1.0):
+    def forward(self, subject_views: Dict[int, SubjectView], split: str, beta: float = 1.0, ortho_weight: float = 1e-3):
         mu, logvar = self.encode_group(subject_views, split)
         z = mu + torch.exp(0.5 * logvar) * torch.randn_like(mu)
         zf = self.core(z)
@@ -264,7 +259,7 @@ class SRMVAE(nn.Module):
             recon_loss = recon_loss + F.mse_loss(x_hat, x, reduction='mean')
         kl = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         
-        # SRM-like orthogonality on decoder weights
+     
         ortho_pen = torch.tensor(0.0, device=z.device)
         for dec in self.decoders.values():
             W = dec.lin.weight  # [E_i, k]
@@ -272,7 +267,7 @@ class SRMVAE(nn.Module):
             I = torch.eye(G.shape[0], device=G.device)
             ortho_pen = ortho_pen + torch.norm(G - I, p='fro')**2
         
-        loss = recon_loss + beta * kl + 1e-6 * ortho_pen  # tune 1e-3
+        loss = recon_loss + beta * kl + ortho_weight * ortho_pen  # 
         return loss, recon_loss.detach(), kl.detach()
 
     @torch.no_grad()
@@ -294,7 +289,7 @@ class SRMVAE(nn.Module):
 # Training (VAE)
 # -----------------------------
 
-def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, verbose: bool = True) -> SRMVAE:
+def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, verbose: bool = True, ortho_weight: float = 1e-3) -> SRMVAE:
     dev = torch_device()
     for sid in batch.subjects:
         sv = batch.subject_views[sid]
@@ -312,7 +307,7 @@ def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
     for ep in range(1, epochs + 1):
         model.train()
         beta_ep = beta * min(1.0, ep / 500)  # warm-up over ~50 epochs
-        loss, rec, kl = model(batch.subject_views, split="train", beta=beta_ep)
+        loss, rec, kl = model(batch.subject_views, split="train", beta=beta_ep, ortho_weight=ortho_weight)
         opt.zero_grad(set_to_none=True)
         loss.backward()
         opt.step()

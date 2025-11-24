@@ -7,17 +7,19 @@
 DATA_PATH   = "./all_data.pkl"   # path to your all_data.pkl
 SEED        = 1234               # random seed
 TRAIN_RATIO = 0.8                # first 80% train, last 20% test
-LAG_LIST    = [-100,100,700]
+LAG_LIST    = [0, 200]
 
- 
-SRM_K       = 5               
-VAE_K       = 5                  
+SRM_K       = 5
+VAE_K       = 5
 
 # Training / eval hyperparams
-VAE_EPOCHS  = 500
-VAE_LR      = 5e-3
-VAE_BETA    = 1
-PCA_DIM     = 50                  
+VAE_EPOCHS  = 1000
+VAE_LR      = 1e-3
+VAE_BETA    = 0.5
+VAE_HIDDEN_DIMS = [128, 64]  # Two hidden layers
+SELF_RECON_WEIGHT = 0        # Alpha
+CROSS_RECON_WEIGHT = 2       # Gamma
+PCA_DIM     = 100
 
 # Plotting
 YLIM        = (0.0, 0.40)
@@ -197,38 +199,62 @@ def build_lag_batch_from_loaded(
 # SRM-VAE model
 # -----------------------------
 class PerSubjectEncoder(nn.Module):
-    """Linear encoder per subject: R^{E_i} -> (mu, logvar) in R^k"""
-    def __init__(self, e_i: int, k: int):
+    """Non-linear encoder per subject: R^{E_i} -> (mu, logvar) in R^k"""
+    def __init__(self, e_i: int, k: int, hidden_dims: List[int]):
         super().__init__()
-        self.lin = nn.Linear(e_i, 2 * k, bias=True)
-        nn.init.xavier_uniform_(self.lin.weight)
+        layers = []
+        input_dim = e_i
+        for hidden_dim in hidden_dims:
+            layers.append(nn.Linear(input_dim, hidden_dim))
+            layers.append(nn.ReLU())
+            input_dim = hidden_dim
+        layers.append(nn.Linear(input_dim, 2 * k))
+        
+        self.net = nn.Sequential(*layers)
+        
+        for layer in self.net:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_uniform_(layer.weight)
+
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        h = self.lin(x)  # [T, 2k]
+        h = self.net(x)  # [T, 2k]
         mu, logvar = torch.chunk(h, 2, dim=-1)
         return mu, logvar.clamp(min=-8.0, max=8.0)
 
 class PerSubjectDecoder(nn.Module):
-    """Linear decoder per subject: R^k -> R^{E_i}"""
-    def __init__(self, k: int, e_i: int):
+    """Non-linear decoder per subject: R^k -> R^{E_i}"""
+    def __init__(self, k: int, e_i: int, hidden_dims: List[int]):
         super().__init__()
-        self.lin = nn.Linear(k, e_i, bias=False)
-        nn.init.xavier_uniform_(self.lin.weight)
+        layers = []
+        input_dim = k
+        for hidden_dim in hidden_dims:
+            layers.append(nn.Linear(input_dim, hidden_dim))
+            layers.append(nn.ReLU())
+            input_dim = hidden_dim
+        layers.append(nn.Linear(input_dim, e_i))
+        
+        self.net = nn.Sequential(*layers)
+        
+        for layer in self.net:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_uniform_(layer.weight)
+
     def forward(self, zf: torch.Tensor) -> torch.Tensor:
-        return self.lin(zf)
+        return self.net(zf)
 
 class SRMVAE(nn.Module):
     """
     Encoders per subject -> precision-weighted group posterior -> shared core f(z)
     -> decoders per subject (SRM-like).
     """
-    def __init__(self, elec_num: Dict[int, int], k: int):
+    def __init__(self, elec_num: Dict[int, int], k: int, hidden_dims: List[int]):
         super().__init__()
         self.k = k
         self.encoders = nn.ModuleDict()
         self.decoders = nn.ModuleDict()
         for sid, e_i in elec_num.items():
-            self.encoders[str(sid)] = PerSubjectEncoder(e_i, k)
-            self.decoders[str(sid)] = PerSubjectDecoder(k, e_i)
+            self.encoders[str(sid)] = PerSubjectEncoder(e_i, k, hidden_dims)
+            self.decoders[str(sid)] = PerSubjectDecoder(k, e_i, hidden_dims)
         self.core = nn.Identity()
 
     @staticmethod
@@ -248,7 +274,7 @@ class SRMVAE(nn.Module):
             logvar_list.append(logvar_i)
         return self._agg_posteriors(mu_list, logvar_list)
 
-    def forward(self, subject_views: Dict[int, SubjectView], split: str, beta: float = 1.0, ortho_weight: float = 1e-3):
+    def forward(self, subject_views: Dict[int, SubjectView], split: str, beta: float = 1.0):
         mu, logvar = self.encode_group(subject_views, split)
         z = mu + torch.exp(0.5 * logvar) * torch.randn_like(mu)
         zf = self.core(z)
@@ -259,16 +285,36 @@ class SRMVAE(nn.Module):
             recon_loss = recon_loss + F.mse_loss(x_hat, x, reduction='mean')
         kl = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         
-     
-        ortho_pen = torch.tensor(0.0, device=z.device)
-        for dec in self.decoders.values():
-            W = dec.lin.weight  # [E_i, k]
-            G = W.T @ W
-            I = torch.eye(G.shape[0], device=G.device)
-            ortho_pen = ortho_pen + torch.norm(G - I, p='fro')**2
-        
-        loss = recon_loss + beta * kl + ortho_weight * ortho_pen  # 
+        loss = recon_loss + beta * kl
         return loss, recon_loss.detach(), kl.detach()
+
+    def forward_cross(self, subject_views: Dict[int, SubjectView], 
+                      source_sid: int, target_sid: int, 
+                      alpha: float, gamma: float, beta: float):
+        # 1. Encode source subject
+        source_view = subject_views[source_sid]
+        mu, logvar = self.encoders[str(source_sid)](source_view.train)
+        
+        # 2. Sample from latent space
+        z = mu + torch.exp(0.5 * logvar) * torch.randn_like(mu)
+        zf = self.core(z)
+        
+        # 3. Self-reconstruction loss
+        source_recon = self.decoders[str(source_sid)](zf)
+        loss_self = F.mse_loss(source_recon, source_view.train, reduction='mean')
+        
+        # 4. Cross-reconstruction loss
+        target_view = subject_views[target_sid]
+        target_recon = self.decoders[str(target_sid)](zf)
+        loss_cross = F.mse_loss(target_recon, target_view.train, reduction='mean')
+        
+        # 5. KL divergence
+        kl = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+        
+        # 6. Total weighted loss
+        total_loss = alpha * loss_self + gamma * loss_cross + beta * kl
+        
+        return total_loss, loss_self.detach(), loss_cross.detach(), kl.detach()
 
     @torch.no_grad()
     def infer_z(self, subject_views: Dict[int, SubjectView], split: str, use_mu: bool = True):
@@ -289,36 +335,70 @@ class SRMVAE(nn.Module):
 # Training (VAE)
 # -----------------------------
 
-def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, verbose: bool = True, ortho_weight: float = 1e-3) -> SRMVAE:
+def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
+                          alpha: float, gamma: float, hidden_dims: List[int], 
+                          verbose: bool = True) -> SRMVAE:
     dev = torch_device()
     for sid in batch.subjects:
         sv = batch.subject_views[sid]
         sv.train = sv.train.to(dev)
         sv.test  = sv.test.to(dev)
-        if sv.mask_train is not None: sv.mask_train = sv.mask_train.to(dev)
-        if sv.mask_test  is not None: sv.mask_test  = sv.mask_test.to(dev)
 
-    model = SRMVAE(batch.elec_num, k=batch.latent_dim).to(dev)
+    model = SRMVAE(batch.elec_num, k=batch.latent_dim, hidden_dims=hidden_dims).to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=lr)
 
     best_loss = math.inf
     best_state = None
+    
+    num_subjects = len(batch.subjects)
+    subject_ids = list(batch.subjects)
 
     for ep in range(1, epochs + 1):
         model.train()
-        beta_ep = beta * min(1.0, ep / 500)  # warm-up over ~50 epochs
-        loss, rec, kl = model(batch.subject_views, split="train", beta=beta_ep, ortho_weight=ortho_weight)
-        opt.zero_grad(set_to_none=True)
-        loss.backward()
-        opt.step()
+        
+        epoch_loss, epoch_self, epoch_cross, epoch_kl = 0, 0, 0, 0
+        
+        # Create shuffled lists of subjects to serve as sources and targets
+        # This ensures that in each epoch, every subject acts as a source
+        # and a target exactly once, for fair training.
+        source_sids = list(subject_ids)
+        target_sids = list(subject_ids)
+        random.shuffle(source_sids)
+        random.shuffle(target_sids)
 
-        curr = float(loss.item())
-        if curr < best_loss - 1e-5:
-            best_loss = curr
+        for i in range(num_subjects):
+            source_sid = source_sids[i]
+            target_sid = target_sids[i]
+
+            # Ensure source and target are not the same for a more meaningful cross-recon
+            if source_sid == target_sid:
+                target_sid = target_sids[(i + 1) % num_subjects]
+            
+            beta_ep = beta * min(1.0, ep / 500)
+            
+            loss, rec_self, rec_cross, kl = model.forward_cross(
+                batch.subject_views, source_sid, target_sid, alpha, gamma, beta_ep
+            )
+            
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            opt.step()
+            
+            epoch_loss += loss.item()
+            epoch_self += rec_self.item()
+            epoch_cross += rec_cross.item()
+            epoch_kl += kl.item()
+
+        avg_loss = epoch_loss / num_subjects
+        if avg_loss < best_loss - 1e-5:
+            best_loss = avg_loss
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
         if verbose and (ep % 25 == 0 or ep == 1):
-            print(f"[ep {ep:03d}] loss={curr:.5f}  rec={float(rec):.5f}  kl={float(kl):.5f}")
+            print(f"[ep {ep:03d}] loss={avg_loss:.5f}  "
+                  f"self={epoch_self/num_subjects:.5f}  "
+                  f"cross={epoch_cross/num_subjects:.5f}  "
+                  f"kl={epoch_kl/num_subjects:.5f}")
 
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -345,10 +425,20 @@ def _colwise_pearsonr(y_true: np.ndarray, y_pred: np.ndarray, eps: float = 1e-8)
     den = np.sqrt((yt**2).sum(axis=0) * (yp**2).sum(axis=0)) + eps
     return num / den
 
-def shared_encoding_vae(batch: LagBatch, k: int, pca_dim: int, seed: int) -> Tuple[float, np.ndarray]:
+def shared_encoding_vae(batch: LagBatch, k: int, pca_dim: int, seed: int, 
+                        hidden_dims: List[int]) -> Tuple[float, np.ndarray]:
     """Return (mean r over dims, r per dim) for SRM-VAE at this lag."""
     dev = torch_device()
-    vae = train_srmvae_on_batch(batch, epochs=VAE_EPOCHS, lr=VAE_LR, beta=VAE_BETA, verbose=True)
+    vae = train_srmvae_on_batch(
+        batch, 
+        epochs=VAE_EPOCHS, 
+        lr=VAE_LR, 
+        beta=VAE_BETA,
+        alpha=SELF_RECON_WEIGHT,
+        gamma=CROSS_RECON_WEIGHT,
+        hidden_dims=hidden_dims,
+        verbose=True
+    )
     vae.eval()
 
     # Infer shared z (μ)
@@ -441,11 +531,12 @@ def shared_encoding_srm(Y_data: np.ndarray, elec_num: np.ndarray, X: np.ndarray,
 # -----------------------------
 
 def sweep_and_plot(Y_data, elec_num, X, lags, lag_list, srm_k, vae_k,
-                   train_ratio, pca_dim, seed, ylim, figsize, save_png):
+                   train_ratio, pca_dim, seed, ylim, figsize, save_png, 
+                   vae_hidden_dims):
     dev = torch_device()
     print(f"[INFO] torch: {torch.__version__}, cuda: {torch.cuda.is_available()}, device: {dev}")
     print(f"[DATA] Y={Y_data.shape}, X={X.shape}, lags_count={len(lags)}")
-    print(f"[CONF] TRAIN_RATIO={train_ratio}, SRM_K={srm_k}, VAE_K={vae_k}, PCA_DIM={pca_dim}")
+    print(f"[CONF] TRAIN_RATIO={train_ratio}, SRM_K={srm_k}, VAE_K={vae_k}, VAE_HIDDEN={vae_hidden_dims}, PCA_DIM={pca_dim}")
 
     srm_means, srm_sems, lag_actual_srm = [], [], []
     vae_means, vae_sems, lag_actual_vae = [], [], []
@@ -468,7 +559,9 @@ def sweep_and_plot(Y_data, elec_num, X, lags, lag_list, srm_k, vae_k,
             Y_data, elec_num, X, lags,
             lag_ms=req, latent_dim=vae_k, train_ratio=train_ratio
         )
-        vae_mean, vae_r_dims = shared_encoding_vae(batch, k=vae_k, pca_dim=pca_dim, seed=seed)
+        vae_mean, vae_r_dims = shared_encoding_vae(
+            batch, k=vae_k, pca_dim=pca_dim, seed=seed, hidden_dims=vae_hidden_dims
+        )
         vae_means.append(vae_mean)
         vae_sems.append(np.nanstd(vae_r_dims, ddof=1) / np.sqrt(len(vae_r_dims)))
         lag_actual_vae.append(batch.lag_ms)
@@ -486,7 +579,7 @@ def sweep_and_plot(Y_data, elec_num, X, lags, lag_list, srm_k, vae_k,
     plt.plot(x, srm_means, linewidth=3.5, label='SRM', color='darkorange')
 
     plt.fill_between(x, vae_means - vae_sems, vae_means + vae_sems, alpha=0.2, color='royalblue')
-    plt.plot(x, vae_means, linewidth=3.5, label='VAE', color='royalblue')
+    plt.plot(x, vae_means, linewidth=3.5, label='VAE (Deep)', color='royalblue')
 
     plt.axvline(0, ls='dashed', c='k', alpha=0.3)
     plt.ylim(ylim)
@@ -536,4 +629,5 @@ if __name__ == '__main__':
         ylim=YLIM,
         figsize=FIGSIZE,
         save_png=SAVE_PNG,
+        vae_hidden_dims=VAE_HIDDEN_DIMS
     )

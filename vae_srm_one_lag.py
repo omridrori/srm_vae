@@ -10,7 +10,7 @@ TRAIN_RATIO = 0.8                # first 80% train, last 20% test
 LAG_MS      = 20                 # target lag (ms); uses closest available lag in the file
 
 LATENT_K    = 5                # VAE shared latent dims
-EPOCHS      = 400000
+EPOCHS      = 5000
 LR          =5e-4
 BETA        = 2               # β-VAE weight
 
@@ -282,7 +282,7 @@ def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
 
     best_loss = math.inf
     best_state = None
-    patience = math.inf
+    patience = 10
     no_imp = 0
 
     for ep in range(1, epochs + 1):

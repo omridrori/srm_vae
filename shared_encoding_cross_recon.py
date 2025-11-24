@@ -7,17 +7,18 @@
 DATA_PATH   = "./all_data.pkl"   # path to your all_data.pkl
 SEED        = 1234               # random seed
 TRAIN_RATIO = 0.8                # first 80% train, last 20% test
-LAG_LIST    = [-100,100,700]
+LAG_LIST    = [-500, 100, 1500]
 
- 
-SRM_K       = 5               
-VAE_K       = 5                  
+SRM_K       = 5
+VAE_K       = 5
 
 # Training / eval hyperparams
-VAE_EPOCHS  = 500
-VAE_LR      = 5e-3
-VAE_BETA    = 1
-PCA_DIM     = 50                  
+VAE_EPOCHS  = 1000
+VAE_LR      = 5e-4
+VAE_BETA    = 0
+SELF_RECON_WEIGHT = 0  # Alpha
+CROSS_RECON_WEIGHT =2 # Gamma
+PCA_DIM     = 100
 
 # Plotting
 YLIM        = (0.0, 0.40)
@@ -270,6 +271,34 @@ class SRMVAE(nn.Module):
         loss = recon_loss + beta * kl + ortho_weight * ortho_pen  # 
         return loss, recon_loss.detach(), kl.detach()
 
+    def forward_cross(self, subject_views: Dict[int, SubjectView], 
+                      source_sid: int, target_sid: int, 
+                      alpha: float, gamma: float, beta: float):
+        # 1. Encode source subject
+        source_view = subject_views[source_sid]
+        mu, logvar = self.encoders[str(source_sid)](source_view.train)
+        
+        # 2. Sample from latent space
+        z = mu + torch.exp(0.5 * logvar) * torch.randn_like(mu)
+        zf = self.core(z)
+        
+        # 3. Self-reconstruction loss
+        source_recon = self.decoders[str(source_sid)](zf)
+        loss_self = F.mse_loss(source_recon, source_view.train, reduction='mean')
+        
+        # 4. Cross-reconstruction loss
+        target_view = subject_views[target_sid]
+        target_recon = self.decoders[str(target_sid)](zf)
+        loss_cross = F.mse_loss(target_recon, target_view.train, reduction='mean')
+        
+        # 5. KL divergence
+        kl = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+        
+        # 6. Total weighted loss
+        total_loss = alpha * loss_self + gamma * loss_cross + beta * kl
+        
+        return total_loss, loss_self.detach(), loss_cross.detach(), kl.detach()
+
     @torch.no_grad()
     def infer_z(self, subject_views: Dict[int, SubjectView], split: str, use_mu: bool = True):
         mu, logvar = self.encode_group(subject_views, split)
@@ -289,36 +318,57 @@ class SRMVAE(nn.Module):
 # Training (VAE)
 # -----------------------------
 
-def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, verbose: bool = True, ortho_weight: float = 1e-3) -> SRMVAE:
+def train_srmvae_on_batch(batch: LagBatch, epochs: int, lr: float, beta: float, 
+                          alpha: float, gamma: float, verbose: bool = True) -> SRMVAE:
     dev = torch_device()
     for sid in batch.subjects:
         sv = batch.subject_views[sid]
         sv.train = sv.train.to(dev)
         sv.test  = sv.test.to(dev)
-        if sv.mask_train is not None: sv.mask_train = sv.mask_train.to(dev)
-        if sv.mask_test  is not None: sv.mask_test  = sv.mask_test.to(dev)
 
     model = SRMVAE(batch.elec_num, k=batch.latent_dim).to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=lr)
 
     best_loss = math.inf
     best_state = None
+    
+    num_subjects = len(batch.subjects)
+    subject_ids = list(batch.subjects)
 
     for ep in range(1, epochs + 1):
         model.train()
-        beta_ep = beta * min(1.0, ep / 500)  # warm-up over ~50 epochs
-        loss, rec, kl = model(batch.subject_views, split="train", beta=beta_ep, ortho_weight=ortho_weight)
-        opt.zero_grad(set_to_none=True)
-        loss.backward()
-        opt.step()
+        
+        epoch_loss, epoch_self, epoch_cross, epoch_kl = 0, 0, 0, 0
+        
+        for i in range(num_subjects):
+            source_sid = random.choice(subject_ids)
+            target_sid = subject_ids[i]
+            
+            beta_ep = beta * min(1.0, ep / 500)
+            
+            loss, rec_self, rec_cross, kl = model.forward_cross(
+                batch.subject_views, source_sid, target_sid, alpha, gamma, beta_ep
+            )
+            
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            opt.step()
+            
+            epoch_loss += loss.item()
+            epoch_self += rec_self.item()
+            epoch_cross += rec_cross.item()
+            epoch_kl += kl.item()
 
-        curr = float(loss.item())
-        if curr < best_loss - 1e-5:
-            best_loss = curr
+        avg_loss = epoch_loss / num_subjects
+        if avg_loss < best_loss - 1e-5:
+            best_loss = avg_loss
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
         if verbose and (ep % 25 == 0 or ep == 1):
-            print(f"[ep {ep:03d}] loss={curr:.5f}  rec={float(rec):.5f}  kl={float(kl):.5f}")
+            print(f"[ep {ep:03d}] loss={avg_loss:.5f}  "
+                  f"self={epoch_self/num_subjects:.5f}  "
+                  f"cross={epoch_cross/num_subjects:.5f}  "
+                  f"kl={epoch_kl/num_subjects:.5f}")
 
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -348,7 +398,15 @@ def _colwise_pearsonr(y_true: np.ndarray, y_pred: np.ndarray, eps: float = 1e-8)
 def shared_encoding_vae(batch: LagBatch, k: int, pca_dim: int, seed: int) -> Tuple[float, np.ndarray]:
     """Return (mean r over dims, r per dim) for SRM-VAE at this lag."""
     dev = torch_device()
-    vae = train_srmvae_on_batch(batch, epochs=VAE_EPOCHS, lr=VAE_LR, beta=VAE_BETA, verbose=True)
+    vae = train_srmvae_on_batch(
+        batch, 
+        epochs=VAE_EPOCHS, 
+        lr=VAE_LR, 
+        beta=VAE_BETA,
+        alpha=SELF_RECON_WEIGHT,
+        gamma=CROSS_RECON_WEIGHT,
+        verbose=True
+    )
     vae.eval()
 
     # Infer shared z (μ)
